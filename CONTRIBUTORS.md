@@ -1,0 +1,3 @@
+# CONTRIBUTORS
+
+None so far.

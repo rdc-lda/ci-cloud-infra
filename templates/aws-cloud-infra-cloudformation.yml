@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Creates base infra AWS resources"
+Metadata: {}
+
+Parameters:
+###########
+
+  ## Access and regional params
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  AvailabilityZone:
+    Description: Availability zone to deploy
+    Type: AWS::EC2::AvailabilityZone::Name
+  VpcCidrBlock:
+    Description: The CIDR block used for the subnet where environment will be deployed
+    Type: String
+    Default: '10.0.0.0/24'
+  DeploymentId:
+    Description: The deployment identifier
+    Type: String
+
+Resources:
+##########
+
+  ## Network resources
+  DeploymentVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-vpc'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+
+  InternetGateways:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-internetgateway'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateways
+      VpcId: !Ref DeploymentVPC
+
+  Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref DeploymentVPC
+      CidrBlock: !Ref VpcCidrBlock
+      AvailabilityZone: !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-subnet'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+        - Key: DeploymentType
+          Value: 'development'
+
+  RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref DeploymentVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-routetable'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+
+  SubnetRouteTableAsoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet
+
+  Route:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateways
+
+Outputs:
+  VpcId:
+    Value: !Ref DeploymentVPC
+  Subnet:
+    Value: !Ref Subnet 
