@@ -1,7 +1,7 @@
 FROM alpine:3.9
 
 RUN apk update
-RUN apk -Uuv add bash ca-certificates openssl git openssh && \
+RUN apk -Uuv add bash ca-certificates openssl git openssh util-linux && \
     rm /var/cache/apk/*
 
 # Install aws-cli for CloudFormation
@@ -24,17 +24,15 @@ ADD src/aws-func.bash /usr/share/misc/aws-func.bash
 ADD templates/ /usr/share/misc/
 
 # Add the main scripts
-ADD src/init-cloud-infra.bash /usr/bin/init-cloud-infra
-RUN chmod a+x /usr/bin/init-*
+ADD src/cloud-infra.bash /usr/bin/cloud-infra
 
 # AWS Cloud resources
-ADD src/aws-init-cloud-infra.bash /usr/bin/aws-init-cloud-infra
-RUN chmod a+x /usr/bin/aws-* 
+ADD src/aws-cloud-infra.bash /usr/bin/aws-cloud-infra
 
 # Google Cloud resources
-# ADD src/gce-init-cloud-infra.bash /usr/bin/gce-init-cloud-infra
-# RUN chmod a+x /usr/bin/gce-* 
+# ADD src/gce-cloud-infra.bash /usr/bin/gce-cloud-infra
 
 # Azure Cloud resources
-# ADD src/azure-init-cloud-infra.bash /usr/bin/azure-init-cloud-infra
-# RUN chmod a+x /usr/bin/azure-* 
+# ADD src/azure-cloud-infra.bash /usr/bin/azure-cloud-infra
+
+RUN chmod a+x /usr/bin/*-infra

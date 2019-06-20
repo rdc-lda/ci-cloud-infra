@@ -3,6 +3,68 @@
 PROCESS_DIR=$(cd "$(dirname "$0")"; pwd)
 PROCESS_NAME=$(basename "$0")
 
+#
+# Usage function
+function usage {
+    echo "Usage: $0 --manifest=/path/to/infra-manifest.json --config-data=/path/to/config-dir --action=[init|destroy]"
+}
+
+function initModule {
+    for i in "$@"; do
+        case $i in
+            -m=*|--manifest=*)
+            MANIFEST="${i#*=}"
+            shift # past argument=value
+            ;;
+            -c=*|--config-data=*)
+            INFRA_DIR="${i#*=}"
+            shift # past argument=value
+            ;;
+            -a=*|--action=*)
+            ACTION="${i#*=}"
+            shift # past argument=value
+            ;;
+            *)
+                # unknown option
+            ;;
+        esac
+    done
+
+    if [ -z "$MANIFEST" -o ! -f "$MANIFEST" ]; then
+        log ERROR "You need to specify a valid path to the infra manifest JSON file."
+        log WARN "$(usage)"
+        log WARN "Exit process with error code 102."
+        exit 102
+    fi
+
+    if [ -z "$INFRA_DIR" -o ! -d "$INFRA_DIR" ]; then
+        log ERROR "You need to specify a valid path to the config data directory (needs to exist)."
+        log WARN "$(usage)"
+        log WARN "Exit process with error code 103."
+        exit 103
+    fi
+
+    if [ -z "$ACTION" ]; then
+        case $ACTION in
+            init)
+            ;;
+            destroy)
+            ;;
+            *)
+                log ERROR "Valid options for action are: init, destroy."
+                log WARN "$(usage)"
+                log WARN "Exit process with error code 104."
+                exit 104
+            ;;
+        esac
+    fi
+
+    # Read and verify the manifest
+    log "Reading and validating infra manifest..."
+    MANIFEST_JSON=$(cat $MANIFEST)
+    verifyJSON "$MANIFEST_JSON"
+}
+
 function displaytime {
   local T=$1
   local D=$((T/60/60/24))

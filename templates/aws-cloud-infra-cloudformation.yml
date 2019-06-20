@@ -15,7 +15,19 @@ Parameters:
   VpcCidrBlock:
     Description: The CIDR block used for the subnet where environment will be deployed
     Type: String
+    Default: '10.0.0.0/16'
+  OpenShiftCidrBlock:
+    Description: The CIDR block used for the subnet where OpenShift will be deployed
+    Type: String
     Default: '10.0.0.0/24'
+  ChannelMiddlewareCidrBlock:
+    Description: The CIDR block used for the subnet where the channel middleware will be deployed
+    Type: String
+    Default: '10.0.1.0/24'
+  BackendMiddlewareCidrBlock:
+    Description: The CIDR block used for the subnet where backend middleware will be deployed
+    Type: String
+    Default: '10.0.2.0/24'
   DeploymentId:
     Description: The deployment identifier
     Type: String
@@ -61,18 +73,59 @@ Resources:
       InternetGatewayId: !Ref InternetGateways
       VpcId: !Ref DeploymentVPC
 
-  Subnet:
+  OpenShiftSubnet:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref DeploymentVPC
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref OpenShiftCidrBlock
       AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-subnet'
+              - '-openshift-subnet'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+        - Key: DeploymentType
+          Value: 'development'
+
+  ChannelMiddlewareSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref DeploymentVPC
+      CidrBlock: !Ref ChannelMiddlewareCidrBlock
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-channel-middleware-subnet'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+        - Key: DeploymentType
+          Value: 'development'
+
+  BackendMiddlewareSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref DeploymentVPC
+      CidrBlock: !Ref BackendMiddlewareCidrBlock
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-backend-middleware-subnet'
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -95,11 +148,23 @@ Resources:
         - Key: DeploymentType
           Value: 'development'
 
-  SubnetRouteTableAsoc:
+  OpenShiftSubnetRouteTableAsoc:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref RouteTable
-      SubnetId: !Ref Subnet
+      SubnetId: !Ref OpenShiftSubnet
+
+  ChannelMiddlewareSubnetRouteTableAsoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref ChannelMiddlewareSubnet
+
+  BackendMiddlewareSubnetRouteTableAsoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref BackendMiddlewareSubnet
 
   Route:
     Type: "AWS::EC2::Route"
@@ -108,8 +173,36 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateways
 
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-remote-mgmt-group'
+      GroupName: !Join
+        - ''
+        - - !Ref DeploymentId
+          - '-remote-mgmt-group'
+      GroupDescription: "SSH traffic in, all traffic out."
+      VpcId: !Ref DeploymentVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+
 Outputs:
   VpcId:
     Value: !Ref DeploymentVPC
-  Subnet:
-    Value: !Ref Subnet 
+  OpenShiftSubnet:
+    Value: !Ref OpenShiftSubnet 
+  ChannelMiddlewareSubnet:
+    Value: !Ref ChannelMiddlewareSubnet
+  BackendMiddlewareSubnet:
+    Value: !Ref BackendMiddlewareSubnet

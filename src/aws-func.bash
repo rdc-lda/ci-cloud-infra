@@ -33,6 +33,7 @@ function waitForStackCreate {
         --output text)
 
         if [ "$status" = "CREATE_COMPLETE" ]; then
+            log "CloudFormation stack $1 created successfully."
             break
         fi
 
@@ -41,11 +42,29 @@ function waitForStackCreate {
             log ERROR "Check the AWS Console, correct issue and delete the failed stack before retry"
             exit 1
         else
-            echoerr -n "."
-            sleep 2
+            log "CloudFormation stack $1 create in progres..."
+            sleep 5
         fi
 
     done
-    echoerr
+    set -e
+}
+
+function waitForStackDelete {
+    set +e
+    while [ true ]; do   
+        aws cloudformation describe-stacks \
+        --region $MY_AWS_REGION \
+        --stack-name $1 \
+        --query "Stacks[][StackStatus]" &> /dev/null
+
+        if [ ! "$?" = "0" ]; then
+            log "CloudFormation stack $1 deleted successfully."
+            break
+        else
+            log "CloudFormation stack $1 delete in progres..."
+            sleep 5
+        fi
+    done
     set -e
 }
