@@ -1,6 +1,28 @@
 #
 # Set constants
 
+function initAWSInfraModule {
+    if [ -z "$AWS_ACCESS_KEY_ID" -o -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        log ERROR "AWS Access or Secret keys not found in environment, exit."
+        log WARN "Exit process with error code 200."
+        exit 200
+    fi
+
+    #
+    # Set cloud provider config path and file
+    MY_CLOUD_PROVIDER_SETTINGS=$INFRA_DIR/aws-settings.properties
+
+    #
+    # Source settings
+    if [ -f $MY_CLOUD_PROVIDER_SETTINGS ]; then
+        source $MY_CLOUD_PROVIDER_SETTINGS
+    else
+        log ERROR "Cloud Provider settings ($MY_CLOUD_PROVIDER_SETTINGS) not found in workspace, exit."
+        log WARN "Exit process with error code 201."
+        exit 201
+    fi
+}
+
 #
 # Pass JSON and instance name
 function getAwsInstanceCount {

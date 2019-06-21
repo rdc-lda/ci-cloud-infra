@@ -7,17 +7,20 @@ set -e
 source /usr/share/misc/func.bash
 
 # Initialise the cloud infra module (generic interface)
-initModule $@
+initInfraModule $@
+
+# Get name of the module
+MODULE=$(basename $0)
 
 INFRA_PROVIDER=$(echo $MANIFEST_JSON | jq -r '.["infra-provider"]')
 
-if [ -f "/usr/bin/${INFRA_PROVIDER}-cloud-infra" ]; then
-    log "Starting $ACTION cycle for infra provider $INFRA_PROVIDER"
+if [ -f "/usr/bin/${INFRA_PROVIDER}-$MODULE" ]; then
+    log "Starting $ACTION cycle for provider $INFRA_PROVIDER"
 else
-    log ERROR "Cloud infra provider $INFRA_PROVIDER not (yet) supported."
+    log ERROR "Provider for $INFRA_PROVIDER not (yet) supported."
     log WARN "Exit process with error code 103."
     exit 103
 fi
 
 # Invoke the infra provider
-/usr/bin/${INFRA_PROVIDER}-cloud-infra --manifest=$MANIFEST --config-data=$INFRA_DIR --action=$ACTION
+/usr/bin/${INFRA_PROVIDER}-$MODULE --manifest=$MANIFEST --config-data=$INFRA_DIR --action=$ACTION

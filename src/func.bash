@@ -9,7 +9,7 @@ function usage {
     echo "Usage: $0 --manifest=/path/to/infra-manifest.json --config-data=/path/to/config-dir --action=[init|destroy]"
 }
 
-function initModule {
+function initInfraModule {
     for i in "$@"; do
         case $i in
             -m=*|--manifest=*)

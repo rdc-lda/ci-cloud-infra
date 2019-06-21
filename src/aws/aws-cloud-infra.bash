@@ -8,7 +8,7 @@ source /usr/share/misc/func.bash
 source /usr/share/misc/aws-func.bash
 
 # Initialise the cloud infra module (generic interface)
-initModule $@
+initInfraModule $@
 
 if [ -z "$AWS_ACCESS_KEY_ID" -o -z "$AWS_SECRET_ACCESS_KEY" ]; then
     log ERROR "AWS Access or Secret keys not found in environment, exit."
