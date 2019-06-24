@@ -17,6 +17,9 @@ initAWSInfraConfig
 # Set template
 TEMPLATE=/usr/share/misc/aws-openshift-infra-cloudformation.yml.sempl
 
+# Set workspace dir
+WS_DIR=$INFRA_DIR/openshift
+
 #
 # INIT logic
 #
@@ -82,6 +85,15 @@ if [ "$ACTION" = "init" ]; then
     log "Creating CloudFormation stack $result"
     waitForStackCreate $STACK_NAME
 fi
+
+#
+# Create openshift infra properties file with hostnames
+rm -Rf $WS_DIR/hosts.properties
+for machine in master infra worker loadbalancer; do
+   varname=${machine}_node_count
+   count=${!varname:-1}
+   echo "${machine}_nodes=$(getPublicHostnamesFromMachineType $machine $count $MY_AWS_REGION $STACK_NAME)" >> $WS_DIR/hosts.properties
+done
 
 #
 # DESTROY logic

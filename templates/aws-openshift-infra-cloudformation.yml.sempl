@@ -123,7 +123,10 @@ Resources:
   ## Openshift resources
 
   ## Master node
-  OpenshiftMaster:
+
+### begin
+# for MasterNodeId in $(seq 1 ${master_node_count:-1}); do
+  OpenshiftMaster${MasterNodeId}:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: !Ref OpenshiftMasterInstanceType
@@ -145,86 +148,93 @@ Resources:
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-master'
+              - '-openshift-master${MasterNodeId}'
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId
         - Key: OpenshiftClusterType
           Value: 'development'
 
-  DataVolumeMaster:
+  DataVolumeMaster${MasterNodeId}:
     Type: 'AWS::EC2::Volume'
     Properties:
-      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      AvailabilityZone: !GetAtt OpenshiftMaster${MasterNodeId}.AvailabilityZone
       Size: !Ref OpenshiftMasterDataVolumeSize
       Tags:
         - Key: Name
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-data-volume-master'          
+              - '-openshift-data-volume-master${MasterNodeId}'          
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId  
         - Key: OpenshiftClusterType
           Value: 'development'
     DeletionPolicy: Delete
 
-  DataVolumeAtttachmentMaster:
+  DataVolumeAttachmentMaster:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdb'
-      VolumeId: !Ref DataVolumeMaster
-      InstanceId: !Ref OpenshiftMaster
+      VolumeId: !Ref DataVolumeMaster${MasterNodeId}
+      InstanceId: !Ref OpenshiftMaster${MasterNodeId}
 
-  LogVolumeMaster:
+  LogVolumeMaster${MasterNodeId}:
     Type: 'AWS::EC2::Volume'
     Properties:
-      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      AvailabilityZone: !GetAtt OpenshiftMaster${MasterNodeId}.AvailabilityZone
       Size: !Ref OpenshiftMasterLogVolumeSize
       Tags:
         - Key: Name
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-log-volume-master'          
+              - '-openshift-log-volume-master${MasterNodeId}'          
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId  
         - Key: OpenshiftClusterType
           Value: 'development'
     DeletionPolicy: Delete
 
-  LogVolumeAtttachmentMaster:
+  LogVolumeAttachmentMaster:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdf'
-      VolumeId: !Ref LogVolumeMaster
-      InstanceId: !Ref OpenshiftMaster
+      VolumeId: !Ref LogVolumeMaster${MasterNodeId}
+      InstanceId: !Ref OpenshiftMaster${MasterNodeId}
+# done
+### end 
 
+  #
+  # We only attach this NFS volume to the 1st master
   NFSVolumeMaster:
     Type: 'AWS::EC2::Volume'
     Properties:
-      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      AvailabilityZone: !GetAtt OpenshiftMaster1.AvailabilityZone
       Size: !Ref OpenshiftMasterNFSVolumeSize
       Tags:
         - Key: Name
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-nfs-volume-master'
+              - '-openshift-nfs-volume-master1'
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId
         - Key: OpenshiftClusterType
           Value: 'development'
     DeletionPolicy: Delete
 
-  NFSVolumeAtttachmentMaster:
+  NFSVolumeAttachmentMaster:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdc'
       VolumeId: !Ref NFSVolumeMaster
-      InstanceId: !Ref OpenshiftMaster
+      InstanceId: !Ref OpenshiftMaster1
 
   ## Infra node
-  OpenshiftInfra:
+
+### begin
+# for InfraNodeId in $(seq 1 ${infra_node_count:-1}); do
+  OpenshiftInfra${InfraNodeId}:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: !Ref OpenshiftInfraInstanceType
@@ -246,63 +256,64 @@ Resources:
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-infra'
+              - '-openshift-infra${InfraNodeId}'
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId
         - Key: OpenshiftClusterType
           Value: 'development'
 
-  DataVolumeInfra:
+  DataVolumeInfra${InfraNodeId}:
       Type: 'AWS::EC2::Volume'
       Properties:
-        AvailabilityZone: !GetAtt OpenshiftInfra.AvailabilityZone
+        AvailabilityZone: !GetAtt OpenshiftInfra${InfraNodeId}.AvailabilityZone
         Size: !Ref OpenshiftInfraDataVolumeSize
         Tags:
           - Key: Name
             Value: !Join
               - ''
               - - !Ref DeploymentId
-                - '-openshift-data-volume-infra'          
+                - '-openshift-data-volume-infra${InfraNodeId}'          
           - Key: OpenshiftDeploymentId
             Value: !Ref DeploymentId  
           - Key: OpenshiftClusterType
             Value: 'development'
       DeletionPolicy: Delete
 
-  DataVolumeAtttachmentInfra:
+  DataVolumeAttachmentInfra:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdb'
-      VolumeId: !Ref DataVolumeInfra
-      InstanceId: !Ref OpenshiftInfra
+      VolumeId: !Ref DataVolumeInfra${InfraNodeId}
+      InstanceId: !Ref OpenshiftInfra${InfraNodeId}
 
-  LogVolumeInfra:
+  LogVolumeInfra${InfraNodeId}:
     Type: 'AWS::EC2::Volume'
     Properties:
-      AvailabilityZone: !GetAtt OpenshiftInfra.AvailabilityZone
+      AvailabilityZone: !GetAtt OpenshiftInfra${InfraNodeId}.AvailabilityZone
       Size: !Ref OpenshiftInfraLogVolumeSize
       Tags:
         - Key: Name
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-log-volume-infra'          
+              - '-openshift-log-volume-infra${InfraNodeId}'          
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId  
         - Key: OpenshiftClusterType
           Value: 'development'
     DeletionPolicy: Delete
 
-  LogVolumeAtttachmentInfra:
+  LogVolumeAttachmentInfra:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdf'
-      VolumeId: !Ref LogVolumeInfra
-      InstanceId: !Ref OpenshiftInfra
-
+      VolumeId: !Ref LogVolumeInfra${InfraNodeId}
+      InstanceId: !Ref OpenshiftInfra${InfraNodeId}
+# done
+### end 
 
   ## Loadbalancer node
-  OpenshiftLoadbalancer:
+  OpenshiftLoadbalancer1:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: !Ref OpenshiftLoadbalancerInstanceType
@@ -324,7 +335,7 @@ Resources:
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-lb'
+              - '-openshift-lb1'
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId
         - Key: OpenshiftClusterType
@@ -379,7 +390,7 @@ Resources:
           Value: 'development'
     DeletionPolicy: Delete
 
-  DataVolumeAtttachmentWorker${WorkerNodeId}:
+  DataVolumeAttachmentWorker${WorkerNodeId}:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdb'
@@ -403,7 +414,7 @@ Resources:
           Value: 'development'
     DeletionPolicy: Delete
 
-  LogVolumeAtttachmentWorker${WorkerNodeId}:
+  LogVolumeAttachmentWorker${WorkerNodeId}:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       Device: '/dev/xvdf'
@@ -480,7 +491,29 @@ Resources:
           Value: 'development'
 
 Outputs:
+  MasterSecurityGroup:
+    Value: !Ref MasterSecurityGroup
   WorkerSecurityGroup:
     Value: !Ref WorkerSecurityGroup
   OpenShiftSubnet:
     Value: !Ref OpenShiftSubnet
+### begin
+# for MasterNodeId in $(seq 1 ${master_node_count:-1}); do
+  master${MasterNodeId}PublicHostname:
+    Value: !GetAtt OpenshiftMaster${MasterNodeId}.PublicDnsName
+# done
+### end 
+### begin
+# for InfraNodeId in $(seq 1 ${infra_node_count:-1}); do
+  infra${InfraNodeId}PublicHostname:
+    Value: !GetAtt OpenshiftInfra${InfraNodeId}.PublicDnsName
+# done
+### end 
+### begin
+# for WorkerNodeId in $(seq 1 ${worker_node_count:-1}); do
+  worker${WorkerNodeId}PublicHostname:
+    Value: !GetAtt OpenshiftWorker${WorkerNodeId}.PublicDnsName
+# done
+### end 
+  loadbalancer1PublicHostname:
+    Value: !GetAtt OpenshiftLoadbalancer1.PublicDnsName

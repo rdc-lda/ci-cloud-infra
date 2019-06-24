@@ -106,3 +106,27 @@ function waitForStackDelete {
     done
     set -e
 }
+
+#
+# Call with 
+# $1: machineType
+# $2: machineCount
+# $3: region
+# $4: stackname
+function getPublicHostnamesFromMachineType {
+    unset fqdn
+    for nodeId in $(seq 1 ${2:-1}); do
+        res="$(aws cloudformation describe-stacks \
+        --region $3 \
+        --stack-name $4 \
+        --query 'Stacks[0].Outputs[?OutputKey==`'${1}${nodeId}'PublicHostname`].OutputValue' \
+        --output text)"
+
+        if [ ! -z "$fqdn" ]; then
+            fqdn="$fqdn,$res"
+        else
+            fqdn="$res"
+        fi
+    done
+    echo "$fqdn"
+}
