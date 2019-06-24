@@ -1,0 +1,486 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Creates AWS resources for OpenShift development environment"
+Metadata: {}
+
+Parameters:
+###########
+
+  ## Access and regional params
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  AvailabilityZone:
+    Description: Availability zone to deploy
+    Type: AWS::EC2::AvailabilityZone::Name
+  InfraVPC:
+    Description: VPC Id of cloud infra
+    Type: String
+  InfraVPCRouteTable:
+    Description: Route table ID of infra VPC 
+    Type: String
+  OpenShiftCidrBlock:
+    Description: The CIDR block used for the subnet where OpenShift will be deployed
+    Type: String
+    Default: '10.0.10.0/24'
+
+  ## Openshift cluster params
+  DeploymentId:
+    Description: The Openshift Origin cluster name
+    Type: String
+  OpenshiftLoadbalancerInstanceType:
+    Description: The instance type of the loadbalancer node
+    Type: String
+    Default: 't2.small'  
+  OpenshiftMasterInstanceType:
+    Description: The instance type of the master node
+    Type: String
+    Default: 't2.medium'
+  OpenshiftMasterDataVolumeSize:
+    Description: The master data volume size in Gb
+    Type: String
+    Default: '50'
+  OpenshiftMasterLogVolumeSize:
+    Description: The master log volume size in Gb
+    Type: String
+    Default: '10'
+  OpenshiftMasterNFSVolumeSize:
+    Description: The master NFS volume size in Gb
+    Type: String
+    Default: '10'
+  OpenshiftInfraInstanceType:
+    Description: The instance type of the infra node
+    Type: String
+    Default: 't2.medium'
+  OpenshiftInfraDataVolumeSize:
+    Description: The infra data volume size in Gb
+    Type: String
+    Default: '50'
+  OpenshiftInfraLogVolumeSize:
+    Description: The infra log volume size in Gb
+    Type: String
+    Default: '10'
+  OpenshiftWorkerInstanceType:
+    Description: The instance type of a worker node
+    Type: String
+    Default: 't2.medium'
+  OpenshiftWorkerDataVolumeSize:
+    Description: The worker data volume size in Gb
+    Type: String
+    Default: '50'
+  OpenshiftWorkerLogVolumeSize:
+    Description: The worker log volume size in Gb
+    Type: String
+    Default: '10'
+
+Mappings:
+#########
+  RegionMap:
+    us-east-1:
+      CentOS7: "ami-02eac2c0129f6376b"
+    us-east-2:
+      CentOS7: "ami-9cbf9bf9"
+    ap-south-1:
+      CentOS7: "ami-02e60be79e78fef21"
+    ap-southeast-2:
+      CentOS7: "ami-d8c21dba"
+    eu-west-3:
+      CentOS7: "ami-262e9f5b"
+    eu-central-1:
+      CentOS7: "ami-dd3c0f36"
+    
+Resources:
+##########
+
+  #
+  ## Network resources
+  OpenShiftSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref InfraVPC
+      CidrBlock: !Ref OpenShiftCidrBlock
+      AvailabilityZone: !Ref AvailabilityZone
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-subnet'
+        - Key: DeploymentId
+          Value: !Ref DeploymentId
+        - Key: DeploymentType
+          Value: 'development'
+        - Key: DeploymentType
+          Value: 'development'
+
+  SubnetRouteTableAsoc:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref InfraVPCRouteTable
+      SubnetId: !Ref OpenShiftSubnet
+
+  #
+  ## Openshift resources
+
+  ## Master node
+  OpenshiftMaster:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref OpenshiftMasterInstanceType
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AvailabilityZone
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref OpenShiftSubnet
+          GroupSet:
+             - !Ref MasterSecurityGroup
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", CentOS7]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-master'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+  DataVolumeMaster:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      Size: !Ref OpenshiftMasterDataVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-data-volume-master'          
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId  
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  DataVolumeAtttachmentMaster:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdb'
+      VolumeId: !Ref DataVolumeMaster
+      InstanceId: !Ref OpenshiftMaster
+
+  LogVolumeMaster:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      Size: !Ref OpenshiftMasterLogVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-log-volume-master'          
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId  
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  LogVolumeAtttachmentMaster:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdf'
+      VolumeId: !Ref LogVolumeMaster
+      InstanceId: !Ref OpenshiftMaster
+
+  NFSVolumeMaster:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftMaster.AvailabilityZone
+      Size: !Ref OpenshiftMasterNFSVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-nfs-volume-master'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  NFSVolumeAtttachmentMaster:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdc'
+      VolumeId: !Ref NFSVolumeMaster
+      InstanceId: !Ref OpenshiftMaster
+
+  ## Infra node
+  OpenshiftInfra:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref OpenshiftInfraInstanceType
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AvailabilityZone
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref OpenShiftSubnet
+          GroupSet:
+             - !Ref MasterSecurityGroup
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", CentOS7]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-infra'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+  DataVolumeInfra:
+      Type: 'AWS::EC2::Volume'
+      Properties:
+        AvailabilityZone: !GetAtt OpenshiftInfra.AvailabilityZone
+        Size: !Ref OpenshiftInfraDataVolumeSize
+        Tags:
+          - Key: Name
+            Value: !Join
+              - ''
+              - - !Ref DeploymentId
+                - '-openshift-data-volume-infra'          
+          - Key: OpenshiftDeploymentId
+            Value: !Ref DeploymentId  
+          - Key: OpenshiftClusterType
+            Value: 'development'
+      DeletionPolicy: Delete
+
+  DataVolumeAtttachmentInfra:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdb'
+      VolumeId: !Ref DataVolumeInfra
+      InstanceId: !Ref OpenshiftInfra
+
+  LogVolumeInfra:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftInfra.AvailabilityZone
+      Size: !Ref OpenshiftInfraLogVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-log-volume-infra'          
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId  
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  LogVolumeAtttachmentInfra:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdf'
+      VolumeId: !Ref LogVolumeInfra
+      InstanceId: !Ref OpenshiftInfra
+
+
+  ## Loadbalancer node
+  OpenshiftLoadbalancer:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref OpenshiftLoadbalancerInstanceType
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AvailabilityZone
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref OpenShiftSubnet
+          GroupSet:
+             - !Ref MasterSecurityGroup
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", CentOS7]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-lb'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+  ## Worker node(s)
+
+### begin
+# for WorkerNodeId in $(seq 1 ${worker_node_count:-1}); do
+  OpenshiftWorker${WorkerNodeId}:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref OpenshiftWorkerInstanceType
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AvailabilityZone
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref OpenShiftSubnet
+          GroupSet:
+             - !Ref WorkerSecurityGroup
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", CentOS7]
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-worker${WorkerNodeId}'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+  DataVolumeWorker${WorkerNodeId}:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftWorker${WorkerNodeId}.AvailabilityZone
+      Size: !Ref OpenshiftWorkerDataVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-data-volume-worker${WorkerNodeId}'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  DataVolumeAtttachmentWorker${WorkerNodeId}:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdb'
+      VolumeId: !Ref DataVolumeWorker${WorkerNodeId}
+      InstanceId: !Ref OpenshiftWorker${WorkerNodeId}
+
+  LogVolumeWorker${WorkerNodeId}:
+    Type: 'AWS::EC2::Volume'
+    Properties:
+      AvailabilityZone: !GetAtt OpenshiftWorker${WorkerNodeId}.AvailabilityZone
+      Size: !Ref OpenshiftWorkerLogVolumeSize
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-log-volume-worker${WorkerNodeId}'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+    DeletionPolicy: Delete
+
+  LogVolumeAtttachmentWorker${WorkerNodeId}:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: '/dev/xvdf'
+      VolumeId: !Ref LogVolumeWorker${WorkerNodeId}
+      InstanceId: !Ref OpenshiftWorker${WorkerNodeId}
+# done
+### end 
+
+
+  WorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref InfraVPC
+      GroupDescription: Security group for the worker Kubernetes nodes
+      SecurityGroupIngress:
+      - IpProtocol: -1
+        FromPort: -1
+        ToPort: -1
+        CidrIp: !Ref OpenShiftCidrBlock
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-worker-securitygroup'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+  MasterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref InfraVPC
+      GroupDescription: Security group for the master Kubernetes node
+      SecurityGroupIngress:
+      - IpProtocol: -1
+        FromPort: -1
+        ToPort: -1
+        CidrIp: !Ref OpenShiftCidrBlock
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '8443'
+        ToPort: '8443'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '10250'
+        ToPort: '10250'
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - !Ref DeploymentId
+              - '-openshift-master-securitygroup'
+        - Key: OpenshiftDeploymentId
+          Value: !Ref DeploymentId
+        - Key: OpenshiftClusterType
+          Value: 'development'
+
+Outputs:
+  WorkerSecurityGroup:
+    Value: !Ref WorkerSecurityGroup
+  OpenShiftSubnet:
+    Value: !Ref OpenShiftSubnet

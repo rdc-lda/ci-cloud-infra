@@ -12,6 +12,7 @@ initInfraModule $@
 
 # Initialise the AWS infra module (generic interface)
 initAWSInfraModule
+initAWSInfraConfig
 
 #
 # INIT logic
@@ -40,12 +41,6 @@ fi
 #
 if [ "$ACTION" = "destroy" ]; then
     #
-    # Remove CloudFormation template
-    STACK_NAME=${MY_DEPLOYMENT_ID}-backend-middleware
-    # aws cloudformation delete-stack \
-    #     --region $MY_AWS_REGION \
-    #     --stack-name $STACK_NAME &> /dev/null
-
-    log "Deleting CloudFormation stack $STACK_NAME"
-    # waitForStackDelete $STACK_NAME
+    # Delete CloudFormation stack
+    deleteCloudFormationStack  ${MY_DEPLOYMENT_ID}-backend-middleware
 fi

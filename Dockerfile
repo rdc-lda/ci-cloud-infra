@@ -18,6 +18,7 @@ RUN apk -Uuv add jq && \
 ADD templates/ /usr/share/misc/
 
 # Add the main scripts
+ADD src/sempl.bash /usr/bin/sempl
 ADD src/func.bash /usr/share/misc/func.bash
 ADD src/infra-template.bash /usr/bin/cloud-infra
 ADD src/infra-template.bash /usr/bin/openshift-infra
@@ -39,4 +40,4 @@ ADD src/aws/aws-backend-middleware-infra.bash /usr/bin/aws-backend-middleware-in
 # ADD src/azure/azure-func.bash /usr/share/misc/azure-func.bash
 # ADD src/azure/azure-cloud-infra.bash /usr/bin/azure-cloud-infra
 
-RUN chmod a+x /usr/bin/*-infra
+RUN chmod a+x /usr/bin/*-infra /usr/bin/sempl

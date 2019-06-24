@@ -11,7 +11,9 @@ function initAWSInfraModule {
     #
     # Set cloud provider config path and file
     MY_CLOUD_PROVIDER_SETTINGS=$INFRA_DIR/aws-settings.properties
+}
 
+function initAWSInfraConfig {
     #
     # Source settings
     if [ -f $MY_CLOUD_PROVIDER_SETTINGS ]; then
@@ -21,6 +23,20 @@ function initAWSInfraModule {
         log WARN "Exit process with error code 201."
         exit 201
     fi
+}
+
+function deleteCloudFormationStack {
+    #
+    # Remove CloudFormation template
+    STACK_NAME=$1
+    set +e
+    aws cloudformation delete-stack \
+        --region $MY_AWS_REGION \
+        --stack-name $STACK_NAME &> /dev/null
+    set -e
+
+    log "Deleting CloudFormation stack $STACK_NAME"
+    waitForStackDelete $STACK_NAME
 }
 
 #

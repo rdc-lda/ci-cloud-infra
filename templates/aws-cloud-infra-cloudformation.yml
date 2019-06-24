@@ -16,18 +16,19 @@ Parameters:
     Description: The CIDR block used for the subnet where environment will be deployed
     Type: String
     Default: '10.0.0.0/16'
-  OpenShiftCidrBlock:
-    Description: The CIDR block used for the subnet where OpenShift will be deployed
+  DefaultCidrBlock:
+    Description: The CIDR block used for the default subnet
     Type: String
     Default: '10.0.0.0/24'
-  ChannelMiddlewareCidrBlock:
-    Description: The CIDR block used for the subnet where the channel middleware will be deployed
-    Type: String
-    Default: '10.0.1.0/24'
-  BackendMiddlewareCidrBlock:
-    Description: The CIDR block used for the subnet where backend middleware will be deployed
-    Type: String
-    Default: '10.0.2.0/24'
+
+  # ChannelMiddlewareCidrBlock:
+  #   Description: The CIDR block used for the subnet where the channel middleware will be deployed
+  #   Type: String
+  #   Default: '10.0.20.0/24'
+  # BackendMiddlewareCidrBlock:
+  #   Description: The CIDR block used for the subnet where backend middleware will be deployed
+  #   Type: String
+  #   Default: '10.0.30.0/24'
   DeploymentId:
     Description: The deployment identifier
     Type: String
@@ -36,7 +37,7 @@ Resources:
 ##########
 
   ## Network resources
-  DeploymentVPC:
+  InfraVPC:
     Type: "AWS::EC2::VPC"
     Properties:
       CidrBlock: !Ref VpcCidrBlock
@@ -71,13 +72,13 @@ Resources:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateways
-      VpcId: !Ref DeploymentVPC
+      VpcId: !Ref InfraVPC
 
-  OpenShiftSubnet:
+  DefaultSubnet:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref DeploymentVPC
-      CidrBlock: !Ref OpenShiftCidrBlock
+      VpcId: !Ref InfraVPC
+      CidrBlock: !Ref DefaultCidrBlock
       AvailabilityZone: !Ref AvailabilityZone
       MapPublicIpOnLaunch: true
       Tags:
@@ -85,7 +86,7 @@ Resources:
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-openshift-subnet'
+              - '-default-subnet'
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -93,50 +94,50 @@ Resources:
         - Key: DeploymentType
           Value: 'development'
 
-  ChannelMiddlewareSubnet:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref DeploymentVPC
-      CidrBlock: !Ref ChannelMiddlewareCidrBlock
-      AvailabilityZone: !Ref AvailabilityZone
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-channel-middleware-subnet'
-        - Key: DeploymentId
-          Value: !Ref DeploymentId
-        - Key: DeploymentType
-          Value: 'development'
-        - Key: DeploymentType
-          Value: 'development'
+  # ChannelMiddlewareSubnet:
+  #   Type: 'AWS::EC2::Subnet'
+  #   Properties:
+  #     VpcId: !Ref InfraVPC
+  #     CidrBlock: !Ref ChannelMiddlewareCidrBlock
+  #     AvailabilityZone: !Ref AvailabilityZone
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Join
+  #           - ''
+  #           - - !Ref DeploymentId
+  #             - '-channel-middleware-subnet'
+  #       - Key: DeploymentId
+  #         Value: !Ref DeploymentId
+  #       - Key: DeploymentType
+  #         Value: 'development'
+  #       - Key: DeploymentType
+  #         Value: 'development'
 
-  BackendMiddlewareSubnet:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref DeploymentVPC
-      CidrBlock: !Ref BackendMiddlewareCidrBlock
-      AvailabilityZone: !Ref AvailabilityZone
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-backend-middleware-subnet'
-        - Key: DeploymentId
-          Value: !Ref DeploymentId
-        - Key: DeploymentType
-          Value: 'development'
-        - Key: DeploymentType
-          Value: 'development'
+  # BackendMiddlewareSubnet:
+  #   Type: 'AWS::EC2::Subnet'
+  #   Properties:
+  #     VpcId: !Ref InfraVPC
+  #     CidrBlock: !Ref BackendMiddlewareCidrBlock
+  #     AvailabilityZone: !Ref AvailabilityZone
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Join
+  #           - ''
+  #           - - !Ref DeploymentId
+  #             - '-backend-middleware-subnet'
+  #       - Key: DeploymentId
+  #         Value: !Ref DeploymentId
+  #       - Key: DeploymentType
+  #         Value: 'development'
+  #       - Key: DeploymentType
+  #         Value: 'development'
 
   RouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
-      VpcId: !Ref DeploymentVPC
+      VpcId: !Ref InfraVPC
       Tags:
         - Key: Name
           Value: !Join
@@ -148,23 +149,29 @@ Resources:
         - Key: DeploymentType
           Value: 'development'
 
-  OpenShiftSubnetRouteTableAsoc:
+  DefaultSubnetRouteTableAsoc:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties:
       RouteTableId: !Ref RouteTable
-      SubnetId: !Ref OpenShiftSubnet
+      SubnetId: !Ref DefaultSubnet
 
-  ChannelMiddlewareSubnetRouteTableAsoc:
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties:
-      RouteTableId: !Ref RouteTable
-      SubnetId: !Ref ChannelMiddlewareSubnet
+  # OpenShiftSubnetRouteTableAsoc:
+  #   Type: "AWS::EC2::SubnetRouteTableAssociation"
+  #   Properties:
+  #     RouteTableId: !Ref RouteTable
+  #     SubnetId: !Ref OpenShiftSubnet
 
-  BackendMiddlewareSubnetRouteTableAsoc:
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties:
-      RouteTableId: !Ref RouteTable
-      SubnetId: !Ref BackendMiddlewareSubnet
+  # ChannelMiddlewareSubnetRouteTableAsoc:
+  #   Type: "AWS::EC2::SubnetRouteTableAssociation"
+  #   Properties:
+  #     RouteTableId: !Ref RouteTable
+  #     SubnetId: !Ref ChannelMiddlewareSubnet
+
+  # BackendMiddlewareSubnetRouteTableAsoc:
+  #   Type: "AWS::EC2::SubnetRouteTableAssociation"
+  #   Properties:
+  #     RouteTableId: !Ref RouteTable
+  #     SubnetId: !Ref BackendMiddlewareSubnet
 
   Route:
     Type: "AWS::EC2::Route"
@@ -173,7 +180,7 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateways
 
-  SecurityGroup:
+  DefaultSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       Tags:
@@ -181,13 +188,13 @@ Resources:
           Value: !Join
             - ''
             - - !Ref DeploymentId
-              - '-remote-mgmt-group'
+              - '-default-group'
       GroupName: !Join
         - ''
         - - !Ref DeploymentId
-          - '-remote-mgmt-group'
+          - '-default-group'
       GroupDescription: "SSH traffic in, all traffic out."
-      VpcId: !Ref DeploymentVPC
+      VpcId: !Ref InfraVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -199,10 +206,16 @@ Resources:
 
 Outputs:
   VpcId:
-    Value: !Ref DeploymentVPC
-  OpenShiftSubnet:
-    Value: !Ref OpenShiftSubnet 
-  ChannelMiddlewareSubnet:
-    Value: !Ref ChannelMiddlewareSubnet
-  BackendMiddlewareSubnet:
-    Value: !Ref BackendMiddlewareSubnet
+    Value: !Ref InfraVPC
+  VpcRouteTable:
+    Value: !Ref RouteTable
+  DefaultSubnet:
+    Value: !Ref DefaultSubnet
+  DefaultSecurityGroup:
+    Value: !Ref DefaultSecurityGroup
+
+
+  # ChannelMiddlewareSubnet:
+  #   Value: !Ref ChannelMiddlewareSubnet
+  # BackendMiddlewareSubnet:
+  #   Value: !Ref BackendMiddlewareSubnet
