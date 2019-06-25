@@ -20,7 +20,13 @@ Parameters:
     Description: The CIDR block used for the default subnet
     Type: String
     Default: '10.0.0.0/24'
-
+  RootZoneHostedId:
+    Description: The Root DNS hosted Zone ID
+    Type: String   
+  DomainName:
+    Description: The DNS name for the zone
+    Type: String
+    
   # ChannelMiddlewareCidrBlock:
   #   Description: The CIDR block used for the subnet where the channel middleware will be deployed
   #   Type: String
@@ -29,6 +35,7 @@ Parameters:
   #   Description: The CIDR block used for the subnet where backend middleware will be deployed
   #   Type: String
   #   Default: '10.0.30.0/24'
+  
   DeploymentId:
     Description: The deployment identifier
     Type: String
@@ -155,12 +162,6 @@ Resources:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref DefaultSubnet
 
-  # OpenShiftSubnetRouteTableAsoc:
-  #   Type: "AWS::EC2::SubnetRouteTableAssociation"
-  #   Properties:
-  #     RouteTableId: !Ref RouteTable
-  #     SubnetId: !Ref OpenShiftSubnet
-
   # ChannelMiddlewareSubnetRouteTableAsoc:
   #   Type: "AWS::EC2::SubnetRouteTableAssociation"
   #   Properties:
@@ -204,6 +205,32 @@ Resources:
         - IpProtocol: '-1'
           CidrIp: 0.0.0.0/0
 
+  DeploymentHostedZone:
+      Type: 'AWS::Route53::HostedZone'
+      Properties:
+        HostedZoneConfig:
+            Comment: Hosted zone for staging environment
+        Name: !Ref DomainName
+        HostedZoneTags: 
+          - Key: DeploymentId
+            Value: !Ref DeploymentId
+          - Key: DeploymentType
+            Value: 'development'
+
+  NSRootHostedZoneRecordSet:
+      Type: 'AWS::Route53::RecordSet'
+      Properties:
+          HostedZoneId: !Ref RootZoneHostedId
+          Name: !Join
+            - ''
+            - - !Ref DomainName
+              - '.'
+          Type: NS
+          TTL: '900'
+          ResourceRecords: !GetAtt DeploymentHostedZone.NameServers
+      DependsOn:
+          DeploymentHostedZone
+
 Outputs:
   VpcId:
     Value: !Ref InfraVPC
@@ -213,7 +240,8 @@ Outputs:
     Value: !Ref DefaultSubnet
   DefaultSecurityGroup:
     Value: !Ref DefaultSecurityGroup
-
+  HostedZoneId:
+    Value: !Ref DeploymentHostedZone
 
   # ChannelMiddlewareSubnet:
   #   Value: !Ref ChannelMiddlewareSubnet

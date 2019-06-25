@@ -24,6 +24,7 @@ if [ "$ACTION" = "init" ]; then
     MY_DEPLOYMENT_ID=$(getDeploynmentId "$MANIFEST_JSON")-$(uuidgen | awk -F- '{ print $NF }')
     MY_PEM_KEY=$INFRA_DIR/aws-keypair.pem
 
+    # Persist to AWS Settings env
     echo MY_AWS_REGION=$MY_AWS_REGION > $MY_CLOUD_PROVIDER_SETTINGS
     echo MY_AWS_ZONE=$MY_AWS_ZONE >> $MY_CLOUD_PROVIDER_SETTINGS
     echo MY_DEPLOYMENT_ID=$MY_DEPLOYMENT_ID >> $MY_CLOUD_PROVIDER_SETTINGS
@@ -39,25 +40,46 @@ if [ "$ACTION" = "init" ]; then
             --query 'KeyMaterial' --output text > $MY_PEM_KEY
         chmod 400 $MY_PEM_KEY
 
+        # Persist to AWS Settings env
         echo MY_PEM_KEY_NAME=$MY_PEM_KEY_NAME >> $MY_CLOUD_PROVIDER_SETTINGS
     fi
 
     #
+    # Define DNS entries
+    MY_ROOT_DOMAIN=$(getDNSRootDomain "$MANIFEST_JSON")
+    MY_DNS_ZONE="${MY_DEPLOYMENT_ID}.${MY_AWS_REGION}"
+
+    # Persist to AWS Settings env
+    echo MY_ROOT_DOMAIN=$MY_ROOT_DOMAIN >> $MY_CLOUD_PROVIDER_SETTINGS
+    echo MY_DNS_ZONE=$MY_DNS_ZONE >> $MY_CLOUD_PROVIDER_SETTINGS
+
+    # Get the root zone ID
+    root_zone_hosted_id=$(aws route53 list-hosted-zones-by-name \
+        --region $MY_AWS_REGION \
+        --dns-name $MY_ROOT_DOMAIN \
+        --max-items 1 \
+        --query "HostedZones[].Id" \
+        --output text | awk -F/ '{ print $NF }')
+    log "Root zone ($MY_ROOT_DOMAIN) hosted ID set to $root_zone_hosted_id"
+
+    #
     # Initialise base infra
-    STACK_NAME=${MY_DEPLOYMENT_ID}-infra
+    MY_STACK_NAME=${MY_DEPLOYMENT_ID}-infra
     result="$(aws cloudformation create-stack \
         --region $MY_AWS_REGION \
-        --stack-name $STACK_NAME \
+        --stack-name $MY_STACK_NAME \
         --template-body file:///usr/share/misc/aws-cloud-infra-cloudformation.yml \
         --parameters \
             ParameterKey=AvailabilityZone,ParameterValue=${MY_AWS_ZONE} \
             ParameterKey=KeyName,ParameterValue=${MY_PEM_KEY_NAME} \
-            ParameterKey=DeploymentId,ParameterValue=${MY_DEPLOYMENT_ID}  \
+            ParameterKey=DeploymentId,ParameterValue=${MY_DEPLOYMENT_ID} \
+            ParameterKey=DomainName,ParameterValue=${MY_DNS_ZONE}.${MY_ROOT_DOMAIN} \
+            ParameterKey=RootZoneHostedId,ParameterValue=${root_zone_hosted_id} \
         --capabilities CAPABILITY_IAM \
         --query 'StackId' --output text)"
 
     log "Creating CloudFormation stack $result"
-    waitForStackCreate $STACK_NAME
+    waitForStackCreate $MY_STACK_NAME
 fi
 
 #

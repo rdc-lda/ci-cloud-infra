@@ -491,11 +491,11 @@ Resources:
           Value: 'development'
 
 Outputs:
-  MasterSecurityGroup:
+  masterSecurityGroup:
     Value: !Ref MasterSecurityGroup
-  WorkerSecurityGroup:
+  workerSecurityGroup:
     Value: !Ref WorkerSecurityGroup
-  OpenShiftSubnet:
+  openshiftSubnet:
     Value: !Ref OpenShiftSubnet
 ### begin
 # for MasterNodeId in $(seq 1 ${master_node_count:-1}); do

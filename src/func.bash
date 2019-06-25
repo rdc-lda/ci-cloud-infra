@@ -118,6 +118,10 @@ function getDeploynmentId {
     echo $1 | jq -r '.id'
 }
 
+function getDNSRootDomain {
+    echo $1 | jq -r '.["dns-settings"] | .["root-domain"]'
+}
+
 function createInfraDir {
     if [ ! -d ./infra ]; then
        mkdir -p ./infra
