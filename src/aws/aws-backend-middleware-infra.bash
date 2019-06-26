@@ -38,7 +38,7 @@ if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     #     --capabilities CAPABILITY_IAM \
     #     --query 'StackId' --output text)"
 
-    log "Creating CloudFormation stack $result"
+    log MOCK "Creating CloudFormation stack $result"
     # waitForStackCreate $STACK_NAME
     
     #
