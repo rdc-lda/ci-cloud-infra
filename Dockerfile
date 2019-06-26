@@ -24,6 +24,7 @@ ADD src/infra-template.bash /usr/bin/cloud-infra
 ADD src/infra-template.bash /usr/bin/openshift-infra
 ADD src/infra-template.bash /usr/bin/channel-middleware-infra
 ADD src/infra-template.bash /usr/bin/backend-middleware-infra
+ADD src/infra-template.bash /usr/bin/dmz-infra
 
 # AWS Cloud resources
 ADD src/aws/aws-func.bash /usr/share/misc/aws-func.bash
