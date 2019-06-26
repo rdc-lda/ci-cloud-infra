@@ -13,10 +13,13 @@ initInfraModule $@
 # Initialise the AWS infra module (generic interface)
 initAWSInfraModule
 
+# Set workspace dir
+WS_DIR=$INFRA_DIR
+
 #
 # INIT logic
 #
-if [ "$ACTION" = "init" ]; then
+if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     #
     # Init config
     MY_AWS_REGION=$(getAwsRegion "$MANIFEST_JSON")
@@ -80,6 +83,10 @@ if [ "$ACTION" = "init" ]; then
 
     log "Creating CloudFormation stack $result"
     waitForStackCreate $MY_STACK_NAME
+
+    #
+    # Success flag
+    touch $WS_DIR/success
 fi
 
 #

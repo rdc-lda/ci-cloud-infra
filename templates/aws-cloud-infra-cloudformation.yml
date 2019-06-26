@@ -52,10 +52,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-vpc'
+          Value: !Join ['', [!Ref DeploymentId,'-vpc']]
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -66,10 +63,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-internetgateway'
+          Value: !Join ['', [!Ref DeploymentId,'-internetgateway']]
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -90,10 +84,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-default-subnet'
+          Value: !Join ['', [!Ref DeploymentId,'-default-subnet']]
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -147,10 +138,7 @@ Resources:
       VpcId: !Ref InfraVPC
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-routetable'
+          Value: !Join ['', [!Ref DeploymentId,'-routetable']]
         - Key: DeploymentId
           Value: !Ref DeploymentId
         - Key: DeploymentType
@@ -186,14 +174,8 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-default-group'
-      GroupName: !Join
-        - ''
-        - - !Ref DeploymentId
-          - '-default-group'
+          Value: !Join ['', [!Ref DeploymentId,'-default-group']]
+      GroupName: !Join ['', [!Ref DeploymentId,'-default-group']]
       GroupDescription: "SSH traffic in, all traffic out."
       VpcId: !Ref InfraVPC
       SecurityGroupIngress:
@@ -221,10 +203,7 @@ Resources:
       Type: 'AWS::Route53::RecordSet'
       Properties:
           HostedZoneId: !Ref RootZoneHostedId
-          Name: !Join
-            - ''
-            - - !Ref DomainName
-              - '.'
+          Name: !Join ['', [!Ref DomainName, .,]]
           Type: NS
           TTL: '900'
           ResourceRecords: !GetAtt DeploymentHostedZone.NameServers

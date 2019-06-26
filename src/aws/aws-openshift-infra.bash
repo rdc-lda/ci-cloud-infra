@@ -23,7 +23,7 @@ WS_DIR=$INFRA_DIR/openshift
 #
 # INIT logic
 #
-if [ "$ACTION" = "init" ]; then
+if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     #
     # Get reference VpcId from Infra CloudFormation deployment
     infra_vpc_id=$(aws cloudformation describe-stacks \
@@ -54,6 +54,15 @@ if [ "$ACTION" = "init" ]; then
     log "Merging infra manifest settings into OpenShift Cloudformation template..."
     sempl -o $TEMPLATE > aws-openshift-infra-cloudformation.yml
 
+    # Get the deployment zone ID
+    deployment_zone_hosted_id=$(aws route53 list-hosted-zones-by-name \
+        --region $MY_AWS_REGION \
+        --dns-name ${MY_DNS_ZONE}.${MY_ROOT_DOMAIN} \
+        --max-items 1 \
+        --query "HostedZones[].Id" \
+        --output text | awk -F/ '{ print $NF }')
+    log "Deployment zone (${MY_DNS_ZONE}.${MY_ROOT_DOMAIN}) hosted ID set to $deployment_zone_hosted_id"
+
     #
     # Initialise infra
     MY_STACK_NAME=${MY_DEPLOYMENT_ID}-openshift
@@ -70,6 +79,8 @@ if [ "$ACTION" = "init" ]; then
             ParameterKey=AvailabilityZone,ParameterValue=${MY_AWS_ZONE} \
             ParameterKey=KeyName,ParameterValue=${MY_PEM_KEY_NAME} \
             ParameterKey=DeploymentId,ParameterValue=${MY_DEPLOYMENT_ID} \
+            ParameterKey=DomainName,ParameterValue=${MY_DNS_ZONE}.${MY_ROOT_DOMAIN} \
+            ParameterKey=DeploymentZoneHostedId,ParameterValue=${deployment_zone_hosted_id} \
             ParameterKey=OpenshiftMasterInstanceType,ParameterValue=${master_node_type} \
             ParameterKey=OpenshiftInfraInstanceType,ParameterValue=${infra_node_type} \
             ParameterKey=OpenshiftWorkerInstanceType,ParameterValue=${worker_node_type} \
@@ -84,19 +95,21 @@ if [ "$ACTION" = "init" ]; then
 
     log "Creating CloudFormation stack $result"
     waitForStackCreate $MY_STACK_NAME
+
+    #
+    # Create openshift infra properties file with hostnames
+    log "Exporting infra hosts to output dir"
+    rm -Rf $WS_DIR/hosts.properties
+    for machine in master infra worker loadbalancer; do
+        varname=${machine}_node_count
+        count=${!varname:-1}
+        echo "${machine}_nodes=$(getPublicHostnamesFromMachineType $machine $count $MY_AWS_REGION $MY_STACK_NAME)" >> $WS_DIR/hosts.properties
+    done
+
+    #
+    # Success flag
+    touch $WS_DIR/success
 fi
-
-
-
-#
-# Create openshift infra properties file with hostnames
-log "Exporting infra hosts to output dir"
-rm -Rf $WS_DIR/hosts.properties
-for machine in master infra worker loadbalancer; do
-   varname=${machine}_node_count
-   count=${!varname:-1}
-   echo "${machine}_nodes=$(getPublicHostnamesFromMachineType $machine $count $MY_AWS_REGION $MY_STACK_NAME)" >> $WS_DIR/hosts.properties
-done
 
 #
 # DESTROY logic

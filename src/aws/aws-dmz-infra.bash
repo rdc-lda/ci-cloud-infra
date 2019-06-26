@@ -15,10 +15,10 @@ initAWSInfraModule
 initAWSInfraConfig
 
 # Set template
-TEMPLATE=/usr/share/misc/aws-backend-middleware-infra-cloudformation.yml.sempl
+TEMPLATE=/usr/share/misc/aws-dmz-infra-cloudformation.yml.sempl
 
 # Set workspace dir
-WS_DIR=$INFRA_DIR/backend-middleware
+WS_DIR=$INFRA_DIR/dmz
 
 #
 # INIT logic
@@ -26,7 +26,7 @@ WS_DIR=$INFRA_DIR/backend-middleware
 if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     #
     # Initialise infra
-    STACK_NAME=${MY_DEPLOYMENT_ID}-backend-middleware
+    STACK_NAME=${MY_DEPLOYMENT_ID}-dmz
     # result="$(aws cloudformation create-stack \
     #     --region $MY_AWS_REGION \
     #     --stack-name $STACK_NAME \
@@ -52,5 +52,5 @@ fi
 if [ "$ACTION" = "destroy" ]; then
     #
     # Delete CloudFormation stack
-    deleteCloudFormationStack  ${MY_DEPLOYMENT_ID}-backend-middleware
+    deleteCloudFormationStack  ${MY_DEPLOYMENT_ID}-dmz
 fi

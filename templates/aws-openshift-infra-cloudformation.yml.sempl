@@ -22,6 +22,12 @@ Parameters:
     Description: The CIDR block used for the subnet where OpenShift will be deployed
     Type: String
     Default: '10.0.10.0/24'
+  DomainName:
+    Description: The DNS name for the zone
+    Type: String
+  DeploymentZoneHostedId:
+    Description: The Deployment DNS hosted Zone ID
+    Type: String   
 
   ## Openshift cluster params
   DeploymentId:
@@ -481,14 +487,72 @@ Resources:
         CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref DeploymentId
-              - '-openshift-master-securitygroup'
+          Value: !Join ['', [!Ref DeploymentId,'-openshift-master-securitygroup']]
         - Key: OpenshiftDeploymentId
           Value: !Ref DeploymentId
         - Key: OpenshiftClusterType
           Value: 'development'
+
+  APIEndpointDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [!Ref 'DomainName',.]]
+      Comment: API entry to forward requests to loadbalancer (HAPROXY) in front os master node.
+      Name: !Join ['', ['api', ., !Ref 'DomainName', .]]
+      Type: A
+      TTL: '900'
+      ResourceRecords:
+      - !GetAtt OpenshiftLoadbalancer1.PublicIp
+
+  ConsoleEndpointDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [!Ref 'DomainName',.]]
+      Comment: Console entry to forward requests to loadbalancer (HAPROXY) in front os master node.
+      Name: !Join ['', ['console', ., !Ref 'DomainName', .]]
+      Type: A
+      TTL: '900'
+      ResourceRecords:
+      - !GetAtt OpenshiftLoadbalancer1.PublicIp
+
+  AppHostedZone:
+      Type: 'AWS::Route53::HostedZone'
+      Properties:
+        HostedZoneConfig:
+            Comment: Hosted zone for staging environment
+        Name: !Join ['', ['apps', ., !Ref 'DomainName', .]]
+        HostedZoneTags: 
+          - Key: DeploymentId
+            Value: !Ref DeploymentId
+          - Key: DeploymentType
+            Value: 'development'
+
+  NSDeploymentHostedZoneRecordSet:
+      Type: 'AWS::Route53::RecordSet'
+      Properties:
+          HostedZoneId: !Ref DeploymentZoneHostedId
+          Name: !Join ['', ['apps', ., !Ref DomainName, .,]]
+          Type: NS
+          TTL: '900'
+          ResourceRecords: !GetAtt AppHostedZone.NameServers
+      DependsOn:
+          AppHostedZone
+
+  WildcardAppsEndpointDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', ['apps', ., !Ref 'DomainName', .]]
+      Comment: API entry to forward requests to loadbalancer (HAPROXY) in front os master node.
+      Name: !Join ['', ['*', ., 'apps', ., !Ref 'DomainName', .]]
+      Type: A
+      TTL: '900'
+      ResourceRecords:
+### begin
+# for InfraNodeId in $(seq 1 ${infra_node_count:-1}); do
+      - !GetAtt OpenshiftInfra${InfraNodeId}.PublicIp
+# done
+### end 
+
 
 Outputs:
   masterSecurityGroup:

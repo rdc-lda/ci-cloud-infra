@@ -14,10 +14,16 @@ initInfraModule $@
 initAWSInfraModule
 initAWSInfraConfig
 
+# Set template
+TEMPLATE=/usr/share/misc/aws-channel-middelware-infra-cloudformation.yml.sempl
+
+# Set workspace dir
+WS_DIR=$INFRA_DIR/channel-middleware
+
 #
 # INIT logic
 #
-if [ "$ACTION" = "init" ]; then
+if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     #
     # Initialise infra
     STACK_NAME=${MY_DEPLOYMENT_ID}-channel-middleware
@@ -34,6 +40,10 @@ if [ "$ACTION" = "init" ]; then
 
     log "Creating CloudFormation stack $result"
     # waitForStackCreate $STACK_NAME
+    
+    #
+    # Success flag
+    touch $WS_DIR/success
 fi
 
 #
