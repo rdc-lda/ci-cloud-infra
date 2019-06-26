@@ -31,6 +31,7 @@ ADD src/aws/aws-cloud-infra.bash /usr/bin/aws-cloud-infra
 ADD src/aws/aws-openshift-infra.bash /usr/bin/aws-openshift-infra
 ADD src/aws/aws-channel-middleware-infra.bash /usr/bin/aws-channel-middleware-infra
 ADD src/aws/aws-backend-middleware-infra.bash /usr/bin/aws-backend-middleware-infra
+ADD src/aws/aws-dmz-infra.bash /usr/bin/aws-dmz-infra
 
 # Google Cloud resources
 # ADD src/gce/gce-func.bash /usr/share/misc/gce-func.bash
