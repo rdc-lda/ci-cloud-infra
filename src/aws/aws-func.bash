@@ -123,7 +123,7 @@ function getPublicHostnamesFromMachineType {
         --output text)"
 
         if [ ! -z "$fqdn" ]; then
-            fqdn="$fqdn,$res"
+            fqdn="$fqdn $res"
         else
             fqdn="$res"
         fi

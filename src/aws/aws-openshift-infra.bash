@@ -103,7 +103,7 @@ if [ "$ACTION" = "init" -a ! -f $WS_DIR/success ]; then
     for machine in master infra worker loadbalancer; do
         varname=${machine}_node_count
         count=${!varname:-1}
-        echo "${machine}_nodes=$(getPublicHostnamesFromMachineType $machine $count $MY_AWS_REGION $MY_STACK_NAME)" >> $WS_DIR/hosts.properties
+        echo "${machine^^}_NODES=$(getPublicHostnamesFromMachineType $machine $count $MY_AWS_REGION $MY_STACK_NAME)" >> $WS_DIR/hosts.properties
     done
 
     #
